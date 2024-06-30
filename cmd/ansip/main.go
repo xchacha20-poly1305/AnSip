@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 )
 
 var version = "unknown"
@@ -26,7 +26,7 @@ var (
 	logLevelString string
 )
 
-var logger = zerolog.New(os.Stdout)
+var logger = log.Default()
 
 func init() {
 	flag.BoolVar(&showVersion, "v", false, "Print version")
@@ -39,46 +39,46 @@ func init() {
 		os.Exit(0)
 	}
 
-	logLevel, err := zerolog.ParseLevel(logLevelString)
+	logLevel, err := log.ParseLevel(logLevelString)
 	if err != nil {
-		zerolog.DefaultContextLogger.Fatal().Msgf("parse log level: %v", err)
+		logger.Fatalf("parse log level: %v", err)
 	}
-	logger = logger.Level(logLevel)
+	logger.SetLevel(logLevel)
 }
 
 func main() {
 	file, err := os.Open(configPath)
 	if err != nil {
-		logger.Fatal().Msgf("open config: %v", err)
+		logger.Fatalf("open config: %v", err)
 	}
 	defer file.Close()
 	jsonDecoder := json.NewDecoder(file)
 	var config server
 	err = jsonDecoder.Decode(&config)
 	if err != nil {
-		logger.Fatal().Msgf("decode json: %v", err)
+		logger.Fatalf("decode json: %v", err)
 	}
-	logger.Info().Msgf("config: %v", config)
 
 	switch config.Log {
 	case "", "stdout":
-		logger = logger.Output(os.Stdout)
+		logger.SetOutput(os.Stdout)
 	case "stderr":
-		logger = logger.Output(os.Stderr)
+		logger.SetOutput(os.Stderr)
 	case "null", "none", "ignore":
-		logger = logger.Output(io.Discard)
+		logger.SetOutput(io.Discard)
 	default:
 		logFile, err := os.Open(config.Log)
 		if err != nil {
-			logger.Fatal().Msgf("open log: %v", err)
+			logger.Fatalf("open log: %v", err)
 		}
 		defer logFile.Close()
-		logger = logger.Output(logFile)
+		logger.SetOutput(logFile)
 	}
+	logger.Infof("config: %v", config)
 
 	tcpListener, err := net.Listen("tcp", config.Listen)
 	if err != nil {
-		logger.Fatal().Msgf("listen: %v", err)
+		logger.Fatalf("listen: %v", err)
 	}
 	defer tcpListener.Close()
 
@@ -86,7 +86,7 @@ func main() {
 	if config.Cert != "" {
 		_, err = tls.LoadX509KeyPair(config.Cert, config.Key)
 		if err != nil {
-			logger.Fatal().Msgf("load x509 key pair: %v", err)
+			logger.Fatalf("load x509 key pair: %v", err)
 		}
 		tlsConfig := tls.Config{
 			GetCertificate: func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -106,8 +106,8 @@ func main() {
 		listener = tcpListener
 	}
 
-	err = http.Serve(listener, newSIP008Handler(&logger))
+	err = http.Serve(listener, newSIP008Handler(logger))
 	if err != nil {
-		logger.Fatal().Msgf("serve: %v", err)
+		logger.Fatalf("serve: %v", err)
 	}
 }

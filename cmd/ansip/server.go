@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/charmbracelet/log"
 	"github.com/xchacha20-poly1305/ansip"
 	"github.com/xchacha20-poly1305/ansip/internal/freeauth"
 )
@@ -29,10 +29,10 @@ type sip008Handler struct {
 	auth *freeauth.FreeAuth
 	// [string]SIP008
 	data   sync.Map
-	logger *zerolog.Logger
+	logger *log.Logger
 }
 
-func newSIP008Handler(logger *zerolog.Logger) *sip008Handler {
+func newSIP008Handler(logger *log.Logger) *sip008Handler {
 	return &sip008Handler{
 		auth:   freeauth.NewFreeAuth(),
 		logger: logger,
@@ -41,7 +41,7 @@ func newSIP008Handler(logger *zerolog.Logger) *sip008Handler {
 
 func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	defer request.Body.Close()
-	s.logger.Debug().Msgf("http for: %s", request.RemoteAddr)
+	s.logger.Debugf("http for: %s", request.RemoteAddr)
 
 	/*contentType := request.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
@@ -53,17 +53,17 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	username, password, success := authFromHeader(request.Header)
 	if !success {
 		writer.WriteHeader(http.StatusUnauthorized)
-		s.logger.Warn().Msgf("not found auth for: %v", request.RemoteAddr)
+		s.logger.Warnf("not found auth for: %v", request.RemoteAddr)
 		return
 	}
 	success, isNew := s.auth.Verify(username, password)
 	if !success {
 		writer.WriteHeader(http.StatusForbidden)
-		s.logger.Warn().Msgf("failed to verify: %s:%s", username, password)
+		s.logger.Warnf("failed to verify: %s:%s", username, password)
 		return
 	}
 	if isNew {
-		s.logger.Info().Msgf("add new user: %s", username)
+		s.logger.Infof("add new user: %s", username)
 	}
 
 	switch request.Method {
@@ -72,13 +72,13 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		err := json.NewDecoder(request.Body).Decode(&data)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
-			s.logger.Warn().Msgf("failed to decode: %v", err)
+			s.logger.Warnf("failed to decode: %v", err)
 			return
 		}
 		if data.Version != ansip.SIP008Version {
 			writer.WriteHeader(http.StatusBadRequest)
 			_, _ = writer.Write([]byte("invalid version"))
-			s.logger.Warn().Msgf("invalid version: %d", data.Version)
+			s.logger.Warnf("invalid version: %d", data.Version)
 			return
 		}
 		s.data.Store(username, data)
@@ -87,13 +87,13 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 		data, ok := s.data.Load(username)
 		if !ok {
 			writer.WriteHeader(http.StatusNotFound)
-			s.logger.Warn().Msgf("not found data for %s", username)
+			s.logger.Warnf("not found data for %s", username)
 			return
 		}
 		err := json.NewEncoder(writer).Encode(data)
 		if err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
-			s.logger.Warn().Msgf("failed to encode: %v", err)
+			s.logger.Warnf("failed to encode: %v", err)
 			return
 		}
 		return

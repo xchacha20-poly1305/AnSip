@@ -43,12 +43,12 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 	defer request.Body.Close()
 	s.logger.Debug().Msgf("http for: %s", request.RemoteAddr)
 
-	contentType := request.Header.Get("Content-Type")
+	/*contentType := request.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
 		writer.WriteHeader(http.StatusUnsupportedMediaType)
 		logger.Warn().Msgf("not support Content-Type: %s", contentType)
 		return
-	}
+	}*/
 
 	username, password, success := authFromHeader(request.Header)
 	if !success {

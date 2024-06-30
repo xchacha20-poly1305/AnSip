@@ -77,6 +77,12 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 			s.logger.Warn().Msgf("failed to decode: %v", err)
 			return
 		}
+		if data.Version != ansip.SIP008Version {
+			writer.WriteHeader(http.StatusBadRequest)
+			_, _ = writer.Write([]byte("invalid version"))
+			s.logger.Warn().Msgf("invalid version: %d", data.Version)
+			return
+		}
 		s.data.Store(username, data)
 		return
 	case http.MethodGet:

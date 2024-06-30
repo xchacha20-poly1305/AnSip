@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 
@@ -69,9 +68,8 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 
 	switch request.Method {
 	case http.MethodPost:
-		decoder := json.NewDecoder(request.Body)
 		var data ansip.SIP008
-		err := decoder.Decode(&data)
+		err := json.NewDecoder(request.Body).Decode(&data)
 		if err != nil {
 			writer.WriteHeader(http.StatusBadRequest)
 			s.logger.Warn().Msgf("failed to decode: %v", err)
@@ -92,8 +90,7 @@ func (s *sip008Handler) ServeHTTP(writer http.ResponseWriter, request *http.Requ
 			s.logger.Warn().Msgf("not found data for %s", username)
 			return
 		}
-		encoder := json.NewEncoder(writer)
-		err := encoder.Encode(data)
+		err := json.NewEncoder(writer).Encode(data)
 		if err != nil {
 			writer.WriteHeader(http.StatusInternalServerError)
 			s.logger.Warn().Msgf("failed to encode: %v", err)
@@ -124,7 +121,6 @@ func authFromHeader(header http.Header) (username, password string, success bool
 	if err == nil && len(raw) > 0 {
 		auth = string(raw)
 	}
-	os.Stdout.WriteString(auth)
 
 	auths := strings.SplitN(auth, ":", 2)
 	if len(auths) != 2 {
